@@ -155,8 +155,8 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     if (inputs == null || inputs.isEmpty()) {
       throw new IllegalArgumentException("Input error: Inputs should not be null or empty.");
     }
-    if (outputs == null || outputs.isEmpty()) {
-      throw new IllegalArgumentException("Input error: Outputs should not be null or empty.");
+    if (outputs == null) {
+      throw new IllegalArgumentException("Input error: Outputs should not be null.");
     }
     initTensorIndexesMaps();
     // Map inputs/output to input indexes.
@@ -186,8 +186,8 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     if (inputs == null || inputs.length == 0) {
       throw new IllegalArgumentException("Input error: Inputs should not be null or empty.");
     }
-    if (outputs == null || outputs.isEmpty()) {
-      throw new IllegalArgumentException("Input error: Outputs should not be null or empty.");
+    if (outputs == null) {
+      throw new IllegalArgumentException("Input error: Outputs should not be null.");
     }
 
     // TODO(b/80431971): Remove implicit resize after deprecating multi-dimensional array inputs.
@@ -224,7 +224,10 @@ final class NativeInterpreterWrapper implements AutoCloseable {
       }
     }
     for (Map.Entry<Integer, Object> output : outputs.entrySet()) {
-      getOutputTensor(output.getKey()).copyTo(output.getValue());
+      // Null output placeholders are allowed and ignored.
+      if (output.getValue() != null) {
+        getOutputTensor(output.getKey()).copyTo(output.getValue());
+      }
     }
 
     // Only set if the entire operation succeeds.
