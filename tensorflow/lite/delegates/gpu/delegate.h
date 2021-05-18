@@ -17,6 +17,7 @@ limitations under the License.
 #define TENSORFLOW_LITE_DELEGATES_GPU_DELEGATE_H_
 
 #include <stdint.h>
+#include <GLES3/gl3.h>
 
 #include "tensorflow/lite/c/common.h"
 
@@ -125,6 +126,8 @@ TFL_CAPI_EXPORT TfLiteDelegate* TfLiteGpuDelegateV2Create(
 
 // Destroys a delegate created with `TfLiteGpuDelegateV2Create` call.
 TFL_CAPI_EXPORT void TfLiteGpuDelegateV2Delete(TfLiteDelegate* delegate);
+
+TFL_CAPI_EXPORT void TfLiteGpuDelegateBindBufferToTensor(TfLiteDelegate *delegate, GLuint buffer, int tensor_index);
 
 #ifdef __cplusplus
 }

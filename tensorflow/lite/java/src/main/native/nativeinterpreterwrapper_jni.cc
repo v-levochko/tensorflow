@@ -418,6 +418,18 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_allowBufferHandleOutput(
 }
 
 JNIEXPORT void JNICALL
+Java_org_tensorflow_lite_NativeInterpreterWrapper_setBufferHandle(
+        JNIEnv* env, jclass clazz, jlong handle, jint tensor_index, jint buffer_handle, jlong delegate_handle) {
+    Interpreter* interpreter = convertLongToInterpreter(env, handle);
+    if (interpreter == nullptr) return;
+
+    TfLiteOpaqueDelegate* delegate = convertLongToDelegate(env, delegate_handle);
+    if (delegate == nullptr) return;
+
+    interpreter->SetBufferHandle(tensor_index, static_cast<TfLiteBufferHandle>(buffer_handle), delegate);
+}
+
+JNIEXPORT void JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_useXNNPACK(
     JNIEnv* env, jclass clazz, jlong handle, jlong error_handle, jint state,
     jint num_threads) {

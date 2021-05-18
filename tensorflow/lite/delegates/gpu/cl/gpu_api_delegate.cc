@@ -28,6 +28,7 @@ limitations under the License.
 #include "tensorflow/lite/delegates/gpu/common/model_transformer.h"
 #include "tensorflow/lite/delegates/gpu/common/status.h"
 #include "tensorflow/lite/delegates/gpu/common/transformations/model_transformations.h"
+#include "tensorflow/lite/minimal_logging.h"
 
 namespace tflite {
 namespace gpu {
@@ -367,6 +368,20 @@ TfLiteStatus DelegatePrepare(TfLiteContext* context, TfLiteDelegate* delegate) {
 }  // namespace cl
 }  // namespace gpu
 }  // namespace tflite
+
+TFL_CAPI_EXPORT TfLiteGpuDelegateOptions_New TfLiteGpuDelegateOptionsNewDefault() {
+    TfLiteGpuCompileOptions_New compileOptions = {
+            .precision_loss_allowed = static_cast<int32_t>(0),
+            .inference_priority = TFLITE_GPU_INFERENCE_PRIORITY_MIN_LATENCY
+    };
+    TfLiteGpuDelegateOptions_New options = {
+            .compile_options = compileOptions,
+            .egl_display = EGL_NO_DISPLAY,
+            .egl_context = EGL_NO_CONTEXT,
+    };
+
+    return options;
+}
 
 TfLiteDelegate* TfLiteGpuDelegateCreate_New(
     const TfLiteGpuDelegateOptions_New* options) {

@@ -646,11 +646,8 @@ public final class Interpreter implements AutoCloseable {
    * Advanced: Modifies the graph with the provided {@link Delegate}.
    *
    * @throws IllegalArgumentException if error occurs when modifying graph with {@code delegate}.
-   * @deprecated Prefer using {@link Interpreter.Options#addDelegate} to provide delegates at
-   *     creation time. This method will be removed in a future release.
    */
-  @Deprecated
-  public void modifyGraphWithDelegate(Delegate delegate) {
+   public void modifyGraphWithDelegate(Delegate delegate) {
     checkNotClosed();
     wrapper.modifyGraphWithDelegate(delegate);
   }

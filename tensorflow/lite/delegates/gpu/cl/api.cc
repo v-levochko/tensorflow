@@ -38,6 +38,7 @@ limitations under the License.
 #include "tensorflow/lite/delegates/gpu/common/shape.h"
 #include "tensorflow/lite/delegates/gpu/common/task/tensor_desc.h"
 #include "tensorflow/lite/delegates/gpu/common/tensor.h"
+#include "tensorflow/lite/minimal_logging.h"
 
 #ifdef CL_DELEGATE_ALLOW_GL
 #include <EGL/eglext.h>

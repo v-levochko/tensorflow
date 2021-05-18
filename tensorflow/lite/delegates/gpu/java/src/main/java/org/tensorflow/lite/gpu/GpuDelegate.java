@@ -18,6 +18,9 @@ package org.tensorflow.lite.gpu;
 import java.io.Closeable;
 import org.tensorflow.lite.Delegate;
 import org.tensorflow.lite.annotations.UsedByReflection;
+import org.tensorflow.lite.Tensor;
+import java.util.Map;
+import java.util.HashMap;
 
 /**
  * {@link Delegate} for GPU inference.
@@ -36,6 +39,7 @@ public class GpuDelegate implements Delegate, Closeable {
   private static final String TFLITE_GPU_LIB = "tensorflowlite_gpu_jni";
 
   private long delegateHandle;
+  private Map<Integer, Integer> boundBuffers;
 
   /** Delegate options. */
   public static final class Options {
@@ -86,9 +90,21 @@ public class GpuDelegate implements Delegate, Closeable {
       return this;
     }
 
+    public Options setEglContext(long contextHandler) {
+        this.eglContext = contextHandler;
+        return this;
+    }
+
+    public Options setEglDisplay(long displayHandler) {
+        this.eglDisplay = displayHandler;
+        return this;
+    }
+
     boolean precisionLossAllowed = true;
     boolean quantizedModelsAllowed = true;
     int inferencePreference = INFERENCE_PREFERENCE_FAST_SINGLE_ANSWER;
+    long eglContext = 0;
+    long eglDisplay = 0;
   }
 
   public GpuDelegate(Options options) {
@@ -96,7 +112,11 @@ public class GpuDelegate implements Delegate, Closeable {
         createDelegate(
             options.precisionLossAllowed,
             options.quantizedModelsAllowed,
-            options.inferencePreference);
+            options.inferencePreference,
+            options.eglDisplay,
+            options.eglContext
+        );
+    boundBuffers = new HashMap<>();
   }
 
   @UsedByReflection("TFLiteSupport/model/GpuDelegateProxy")
@@ -107,6 +127,16 @@ public class GpuDelegate implements Delegate, Closeable {
   @Override
   public long getNativeHandle() {
     return delegateHandle;
+  }
+
+  public void bindGlBuffer(Tensor tensor, int ssbo) {
+    int tensorIndex = tensor.index();
+    bindGlBufferToTensor(delegateHandle, tensorIndex, ssbo);
+    boundBuffers.put(tensorIndex, ssbo);
+  }
+
+  public Map<Integer, Integer> getBoundBuffers() {
+    return boundBuffers;
   }
 
   /**
@@ -127,7 +157,9 @@ public class GpuDelegate implements Delegate, Closeable {
   }
 
   private static native long createDelegate(
-      boolean precisionLossAllowed, boolean quantizedModelsAllowed, int preference);
+      boolean precisionLossAllowed, boolean quantizedModelsAllowed, int preference, long eglDisplay, long eglContext);
 
   private static native void deleteDelegate(long delegateHandle);
+
+  private static native void bindGlBufferToTensor(long delegateHandle, int tensorIndex, int ssbo);
 }

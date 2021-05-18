@@ -85,6 +85,17 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     if (options.allowBufferHandleOutput != null) {
       allowBufferHandleOutput(interpreterHandle, options.allowBufferHandleOutput.booleanValue());
     }
+
+    if (options.delegates.size() > 0) {
+        for (Delegate delegate : options.delegates) {
+            long delegateHandle = delegate.getNativeHandle();
+            Map<Integer, Integer> boundBuffers = delegate.getBoundBuffers();
+            for (int tensorIndex : boundBuffers.keySet()) {
+                int bufferHandle = boundBuffers.get(tensorIndex);
+                setBufferHandle(interpreterHandle, tensorIndex, bufferHandle, delegateHandle);
+            }
+        }
+    }
     applyDelegates(options);
 
     // Simply use "-1" to represent the default mode.
@@ -264,6 +275,13 @@ final class NativeInterpreterWrapper implements AutoCloseable {
   }
 
   void modifyGraphWithDelegate(Delegate delegate) {
+    long delegateHandle = delegate.getNativeHandle();
+    Map<Integer, Integer> boundBuffers = delegate.getBoundBuffers();
+    for (int tensorIndex : boundBuffers.keySet()) {
+        int bufferHandle = boundBuffers.get(tensorIndex);
+        setBufferHandle(interpreterHandle, tensorIndex, bufferHandle, delegateHandle);
+    }
+
     applyDelegate(interpreterHandle, errorHandle, delegate.getNativeHandle());
     delegates.add(delegate);
   }
@@ -585,6 +603,8 @@ final class NativeInterpreterWrapper implements AutoCloseable {
   private static native void allowFp16PrecisionForFp32(long interpreterHandle, boolean allow);
 
   private static native void allowBufferHandleOutput(long interpreterHandle, boolean allow);
+
+  private static native void setBufferHandle(long interpreterHandle, int tensorIndex, int bufferHandle, long delegateHandle);
 
   private static native void useXNNPACK(
       long interpreterHandle, long errorHandle, int state, int numThreads);

@@ -61,6 +61,8 @@ typedef struct {
   size_t serialized_binary_cache_size;
 } TfLiteGpuDelegateOptions_New;
 
+TFL_CAPI_EXPORT TfLiteGpuDelegateOptions_New TfLiteGpuDelegateOptionsNewDefault();
+
 // Creates a new delegate instance that need to be destroyed with
 // TfLiteGpuDelegateDelete_New when delegate is no longer used by TFLite.
 // When `options` is set to `nullptr`, the following default values are used:

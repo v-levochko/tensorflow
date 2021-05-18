@@ -15,6 +15,9 @@ limitations under the License.
 
 package org.tensorflow.lite;
 
+import java.util.Map;
+import java.util.HashMap;
+
 /**
  * Wrapper for a native TensorFlow Lite Delegate.
  *
@@ -37,4 +40,8 @@ public interface Delegate {
    *     'TfLiteOpaqueDelegate'.
    */
   public long getNativeHandle();
+
+  default public Map<Integer, Integer> getBoundBuffers() {
+    return new HashMap<>();
+  }
 }

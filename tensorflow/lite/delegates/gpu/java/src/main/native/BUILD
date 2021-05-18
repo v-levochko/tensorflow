@@ -29,6 +29,7 @@ cc_library(
         "//tensorflow/lite/delegates/gpu/common:gpu_info",
         "//tensorflow/lite/delegates/gpu/gl:egl_environment",
         "//tensorflow/lite/delegates/gpu/gl:request_gpu_info",
+        "//tensorflow/lite/delegates/gpu/cl:gpu_api_delegate",
         "//tensorflow/lite/experimental/acceleration/compatibility:android_info",
         "//tensorflow/lite/experimental/acceleration/compatibility:gpu_compatibility",
         "//tensorflow/lite/java/jni",
