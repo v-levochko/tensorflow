@@ -60,9 +60,8 @@ final class NativeInterpreterWrapper implements AutoCloseable {
           "Model ByteBuffer should be either a MappedByteBuffer of the model file, or a direct "
               + "ByteBuffer using ByteOrder.nativeOrder() which contains bytes of model content.");
     }
-    this.modelByteBuffer = buffer;
     long errorHandle = createErrorReporter(ERROR_BUFFER_SIZE);
-    long modelHandle = createModelWithBuffer(modelByteBuffer, errorHandle);
+    long modelHandle = createModelWithBuffer(buffer, errorHandle);
     init(errorHandle, modelHandle, options);
   }
 
@@ -135,7 +134,6 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     modelHandle = 0;
     interpreterHandle = 0;
     cancellationFlagHandle = 0;
-    modelByteBuffer = null;
     inputsIndexes = null;
     outputsIndexes = null;
     isMemoryAllocated = false;
@@ -556,8 +554,6 @@ final class NativeInterpreterWrapper implements AutoCloseable {
   private long cancellationFlagHandle = 0;
 
   private long inferenceDurationNanoseconds = -1;
-
-  private ByteBuffer modelByteBuffer;
 
   // Lazily constructed maps of input and output names to input and output Tensor indexes.
   private Map<String, Integer> inputsIndexes;
