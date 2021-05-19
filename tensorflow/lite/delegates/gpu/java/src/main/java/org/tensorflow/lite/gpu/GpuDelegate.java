@@ -91,8 +91,8 @@ public class GpuDelegate implements Delegate, Closeable {
     }
 
     public Options setEglContext(long contextHandler) {
-        this.eglContext = contextHandler;
-        return this;
+      this.eglContext = contextHandler;
+      return this;
     }
 
     public Options setEglDisplay(long displayHandler) {
@@ -113,9 +113,8 @@ public class GpuDelegate implements Delegate, Closeable {
             options.precisionLossAllowed,
             options.quantizedModelsAllowed,
             options.inferencePreference,
-            options.eglDisplay,
-            options.eglContext
-        );
+            options.eglContext,
+            options.eglDisplay);
     boundBuffers = new HashMap<>();
   }
 
@@ -157,9 +156,9 @@ public class GpuDelegate implements Delegate, Closeable {
   }
 
   private static native long createDelegate(
-      boolean precisionLossAllowed, boolean quantizedModelsAllowed, int preference, long eglDisplay, long eglContext);
-
-  private static native void deleteDelegate(long delegateHandle);
+      boolean precisionLossAllowed, boolean quantizedModelsAllowed, int preference, long eglContext, long eglDisplay);
 
   private static native void bindGlBufferToTensor(long delegateHandle, int tensorIndex, int ssbo);
+
+  private static native void deleteDelegate(long delegateHandle);
 }

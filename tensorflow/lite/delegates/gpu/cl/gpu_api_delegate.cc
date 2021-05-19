@@ -230,24 +230,26 @@ class Delegate {
     return runner_->Run();
   }
 
-  void BindGlBufferToTensor(GLuint buffer_id, int tensor_index,
-                            DataType data_type, DataLayout data_layout) {
-    // At this point the delegate haven't seen a model yet. Therefore, just
-    // record what object gets assigned.
-    if (tensor_index >= tensors_.size()) {
-      tensors_.resize(tensor_index + 1);
-    }
-    TensorObjectDef def;
-    def.object_def.data_type = data_type;
-    def.object_def.data_layout = data_layout;
-    def.object_def.object_type = ObjectType::OPENGL_SSBO;
-    def.object_def.user_provided = true;
-    def.dimensions = Dimensions(0, 0, 0, 0);
-    OpenGlBuffer buffer;
-    buffer.id = buffer_id;
-    TensorObject obj = buffer;
-    tensors_[tensor_index] = std::make_pair(obj, def);
-  }
+
+// Redeclared in delegate.h
+  // void BindGlBufferToTensor(GLuint buffer_id, int tensor_index,
+  //                           DataType data_type, DataLayout data_layout) {
+  //   // At this point the delegate haven't seen a model yet. Therefore, just
+  //   // record what object gets assigned.
+  //   if (tensor_index >= tensors_.size()) {
+  //     tensors_.resize(tensor_index + 1);
+  //   }
+  //   TensorObjectDef def;
+  //   def.object_def.data_type = data_type;
+  //   def.object_def.data_layout = data_layout;
+  //   def.object_def.object_type = ObjectType::OPENGL_SSBO;
+  //   def.object_def.user_provided = true;
+  //   def.dimensions = Dimensions(0, 0, 0, 0);
+  //   OpenGlBuffer buffer;
+  //   buffer.id = buffer_id;
+  //   TensorObject obj = buffer;
+  //   tensors_[tensor_index] = std::make_pair(obj, def);
+  // }
 
   ObjectDef GetObjectDef(int index) const {
     if (index < tensors_.size() && IsValid(tensors_[index].second)) {
@@ -392,27 +394,29 @@ void TfLiteGpuDelegateDelete_New(TfLiteDelegate* delegate) {
   delete tflite::gpu::cl::GetDelegate(delegate);
 }
 
-TFL_CAPI_EXPORT TfLiteStatus TfLiteGpuDelegateBindGlBufferToTensor(
-    TfLiteDelegate* delegate, GLuint buffer_id, int tensor_index,
-    TfLiteType data_type, TfLiteGpuDataLayout data_layout) {
-  auto* gpu_delegate = tflite::gpu::cl::GetDelegate(delegate);
-  if (!gpu_delegate) {
-    return kTfLiteError;
-  }
-  if (!gpu_delegate->SupportsGlObjects()) {
-    return kTfLiteError;
-  }
-  auto type = tflite::gpu::cl::ToDataType(data_type);
-  if (type == tflite::gpu::DataType::UNKNOWN) {
-    return kTfLiteError;
-  }
-  auto layout = tflite::gpu::cl::ToDataLayoutFromTFL(data_layout);
-  if (layout == tflite::gpu::DataLayout::UNKNOWN) {
-    return kTfLiteError;
-  }
-  gpu_delegate->BindGlBufferToTensor(buffer_id, tensor_index, type, layout);
-  return kTfLiteOk;
-}
+
+// See comment to BindGlBufferToTensor method
+// TFL_CAPI_EXPORT TfLiteStatus TfLiteGpuDelegateBindGlBufferToTensor(
+//     TfLiteDelegate* delegate, GLuint buffer_id, int tensor_index,
+//     TfLiteType data_type, TfLiteGpuDataLayout data_layout) {
+//   auto* gpu_delegate = tflite::gpu::cl::GetDelegate(delegate);
+//   if (!gpu_delegate) {
+//     return kTfLiteError;
+//   }
+//   if (!gpu_delegate->SupportsGlObjects()) {
+//     return kTfLiteError;
+//   }
+//   auto type = tflite::gpu::cl::ToDataType(data_type);
+//   if (type == tflite::gpu::DataType::UNKNOWN) {
+//     return kTfLiteError;
+//   }
+//   auto layout = tflite::gpu::cl::ToDataLayoutFromTFL(data_layout);
+//   if (layout == tflite::gpu::DataLayout::UNKNOWN) {
+//     return kTfLiteError;
+//   }
+//   gpu_delegate->BindGlBufferToTensor(buffer_id, tensor_index, type, layout);
+//   return kTfLiteOk;
+// }
 
 bool TfLiteGpuDelegateGetSerializedBinaryCache(TfLiteDelegate* delegate,
                                                size_t* size,

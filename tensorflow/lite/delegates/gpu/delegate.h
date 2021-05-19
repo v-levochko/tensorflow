@@ -21,6 +21,9 @@ limitations under the License.
 
 #include "tensorflow/lite/c/common.h"
 
+#include <EGL/egl.h>
+#include <GLES3/gl31.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif  // __cplusplus
@@ -58,6 +61,12 @@ enum TfLiteGpuExperimentalFlags {
   TFLITE_GPU_EXPERIMENTAL_FLAGS_CL_ONLY = 1 << 1,
   TFLITE_GPU_EXPERIMENTAL_FLAGS_GL_ONLY = 1 << 2
 };
+
+enum TfLiteGpuDataLayout {
+  TFLITE_GPU_DATA_LAYOUT_BHWC = 0,
+  TFLITE_GPU_DATA_LAYOUT_DHWC4 = 1,
+};
+
 
 // IMPORTANT: Always use TfLiteGpuDelegateOptionsV2Default() method to create
 // new instance of TfLiteGpuDelegateOptionsV2, otherwise every new added option
@@ -102,6 +111,13 @@ typedef struct {
   // This limits the maximum number of partitions to be delegated. By default,
   // it's set to 1 in TfLiteGpuDelegateOptionsV2Default().
   int32_t max_delegated_partitions;
+
+  // [Optional]
+  // Whenever EGL display and EGL context are set, corresponding OpenCL context
+  // will be created.
+  // These variables are required when using GL objects as inputs or outputs.
+  EGLDisplay egl_display;
+  EGLContext egl_context;
 } TfLiteGpuDelegateOptionsV2;
 
 // Populates TfLiteGpuDelegateOptionsV2 as follows:
@@ -123,6 +139,18 @@ TFL_CAPI_EXPORT TfLiteGpuDelegateOptionsV2 TfLiteGpuDelegateOptionsV2Default();
 // When `options` is set to `nullptr`, then default options are used.
 TFL_CAPI_EXPORT TfLiteDelegate* TfLiteGpuDelegateV2Create(
     const TfLiteGpuDelegateOptionsV2* options);
+
+// Binds GL shader storage object to an input or an output tensor in the
+// initialized delegate. Bound buffer should have sufficient storage to
+// accommodate all elements of a tensor.
+//
+// Supports data of kTfliteFloat16 or kTfliteFloat32 types in BHWC or DHWC4 data
+// layouts.
+//
+// *** Must be called *before* `Interpreter::ModifyGraphWithDelegate`. ***
+TFL_CAPI_EXPORT TfLiteStatus TfLiteGpuDelegateBindGlBufferToTensor(
+    TfLiteDelegate* delegate, GLuint buffer_id, int tensor_index,
+    TfLiteType data_type, TfLiteGpuDataLayout data_layout);
 
 // Destroys a delegate created with `TfLiteGpuDelegateV2Create` call.
 TFL_CAPI_EXPORT void TfLiteGpuDelegateV2Delete(TfLiteDelegate* delegate);

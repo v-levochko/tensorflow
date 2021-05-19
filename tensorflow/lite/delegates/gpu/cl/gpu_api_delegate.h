@@ -77,10 +77,12 @@ TFL_CAPI_EXPORT TfLiteDelegate* TfLiteGpuDelegateCreate_New(
 // Destroys a delegate created with `TfLiteGpuDelegateCreate_New` call.
 TFL_CAPI_EXPORT void TfLiteGpuDelegateDelete_New(TfLiteDelegate* delegate);
 
-typedef enum {
-  TFLITE_GPU_DATA_LAYOUT_BHWC = 0,
-  TFLITE_GPU_DATA_LAYOUT_DHWC4 = 1,
-} TfLiteGpuDataLayout;
+
+// Redeclared in delegate.h
+// typedef enum {
+//   TFLITE_GPU_DATA_LAYOUT_BHWC = 0,
+//   TFLITE_GPU_DATA_LAYOUT_DHWC4 = 1,
+// } TfLiteGpuDataLayout;
 
 // Binds GL shader storage object to an input or an output tensor in the
 // initialized delegate. Bound buffer should have sufficient storage to

@@ -43,6 +43,7 @@ limitations under the License.
 #include "tensorflow/lite/minimal_logging.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/util.h"
+#include "tensorflow/lite/minimal_logging.h"
 
 namespace tflite {
 

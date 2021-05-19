@@ -69,6 +69,28 @@ InferenceUsage ToUsage(int32_t usage) {
   return InferenceUsage::UNKNOWN;
 }
 
+DataType ToDataType(TfLiteType data_type) {
+  switch (data_type) {
+    case kTfLiteFloat16:
+      return DataType::FLOAT16;
+    case kTfLiteFloat32:
+      return DataType::FLOAT32;
+    default:
+      return DataType::UNKNOWN;
+  }
+}
+
+DataLayout ToDataLayoutFromTFL(TfLiteGpuDataLayout data_layout) {
+  switch (data_layout) {
+    case TFLITE_GPU_DATA_LAYOUT_BHWC:
+      return DataLayout::BHWC;
+    case TFLITE_GPU_DATA_LAYOUT_DHWC4:
+      return DataLayout::DHWC4;
+    default:
+      return DataLayout::UNKNOWN;
+  }
+}
+
 // Forward declarations.
 TfLiteStatus DelegatePrepare(TfLiteContext* context, TfLiteDelegate* delegate);
 
@@ -100,20 +122,37 @@ class Delegate {
   }
   int num_delegate_kernels() const { return num_delegate_kernels_; }
 
-    void SetExternalObjectDef(int index, ObjectDef object_def) {
-        external_object_defs_[index] = object_def;
-    }
+  bool SupportsGlObjects() const {
+    return options_.egl_context != EGL_NO_CONTEXT &&
+           options_.egl_display != EGL_NO_DISPLAY;
+  }
 
-    void SetExternalTensorObject(int index, TensorObject tensor_object) {
-        external_tensor_objects_[index] = tensor_object;
+  void BindGlBufferToTensor(GLuint buffer_id, int tensor_index,
+                            DataType data_type, DataLayout data_layout) {
+    // At this point the delegate haven't seen a model yet. Therefore, just
+    // record what object gets assigned.
+    if (tensor_index >= tensors_.size()) {
+      tensors_.resize(tensor_index + 1);
     }
+    TensorObjectDef def;
+    def.object_def.data_type = data_type;
+    def.object_def.data_layout = data_layout;
+    def.object_def.object_type = ObjectType::OPENGL_SSBO;
+    def.object_def.user_provided = true;
+    def.dimensions = Dimensions(0, 0, 0, 0);
+    OpenGlBuffer buffer;
+    buffer.id = buffer_id;
+    TensorObject obj = buffer;
+    tensors_[tensor_index] = std::make_pair(obj, def);
+  }
+
+  const std::vector<std::pair<TensorObject, TensorObjectDef>> tensors() const { return tensors_; }
 
  private:
   TfLiteDelegate delegate_;
   TfLiteGpuDelegateOptionsV2 options_;
   int num_delegate_kernels_ = 0;
-    std::map<int64_t, ObjectDef> external_object_defs_;
-    std::map<int64_t, TensorObject> external_tensor_objects_;
+  std::vector<std::pair<TensorObject, TensorObjectDef>> tensors_;
 
   friend class DelegateKernel;
 };
@@ -248,10 +287,11 @@ class DelegateKernel {
   }
 
   ObjectDef GetObjectDef(int index) const {
-      if (delegate_->external_object_defs_.count(index) > 0) {
-          return delegate_->external_object_defs_.at(index);
-      }
-    
+    auto t = delegate_->tensors();
+
+    if (index < t.size() && IsValid(t[index].second)) {
+      return t[index].second.object_def;
+    }
     ObjectDef default_object_def;
     default_object_def.data_type = DataType::FLOAT32;
     default_object_def.data_layout = DataLayout::BHWC;
@@ -261,10 +301,11 @@ class DelegateKernel {
   }
 
   TensorObject GetTensorObject(int index, TfLiteContext* context) const {
-      if (delegate_->external_tensor_objects_.count(index) > 0) {
-          return delegate_->external_tensor_objects_.at(index);
-      }
-
+    auto t = delegate_->tensors();
+    if (index < t.size() &&
+        IsValid(t[index].second, t[index].first)) {
+      return t[index].first;
+    }
     auto& tensor = context->tensors[index];
     return MakeCpuMemory(absl::MakeSpan(tensor.data.raw, tensor.bytes));
   }
@@ -303,11 +344,15 @@ class DelegateKernel {
                                    std::unique_ptr<InferenceBuilder>* builder,
                                    bool* graph_is_destroyed) {
     *graph_is_destroyed = false;
+    auto delegate_options = delegate_->options();
+
     cl::InferenceEnvironmentOptions env_options;
+    env_options.egl_context = delegate_options.egl_context;
+    env_options.egl_display = delegate_options.egl_display;
     cl::InferenceEnvironmentProperties properties;
     RETURN_IF_ERROR(cl::NewInferenceEnvironment(env_options, &cl_environment_,
                                                 &properties));
-    auto delegate_options = delegate_->options();
+    
     cl::InferenceOptions options;
     // If is_precision_loss_allowed == -1, then just use priorities instead
     // of paying attention to is_precision_loss_allowed value.
@@ -468,6 +513,8 @@ TfLiteGpuDelegateOptionsV2 TfLiteGpuDelegateOptionsV2Default() {
   options.inference_priority3 = TFLITE_GPU_INFERENCE_PRIORITY_AUTO;
   options.experimental_flags = TFLITE_GPU_EXPERIMENTAL_FLAGS_ENABLE_QUANT;
   options.max_delegated_partitions = 1;
+  options.egl_display = EGL_NO_DISPLAY;
+  options.egl_context = EGL_NO_CONTEXT;
   return options;
 }
 
@@ -479,30 +526,28 @@ TfLiteDelegate* TfLiteGpuDelegateV2Create(
   return gpu_delegate ? gpu_delegate->tflite_delegate() : nullptr;
 }
 
+TFL_CAPI_EXPORT TfLiteStatus TfLiteGpuDelegateBindGlBufferToTensor(
+    TfLiteDelegate* delegate, GLuint buffer_id, int tensor_index,
+    TfLiteType data_type, TfLiteGpuDataLayout data_layout) {
+  auto* gpu_delegate = tflite::gpu::GetDelegate(delegate);
+  if (!gpu_delegate) {
+    return kTfLiteError;
+  }
+  if (!gpu_delegate->SupportsGlObjects()) {
+    return kTfLiteError;
+  }
+  auto type = tflite::gpu::ToDataType(data_type);
+  if (type == tflite::gpu::DataType::UNKNOWN) {
+    return kTfLiteError;
+  }
+  auto layout = tflite::gpu::ToDataLayoutFromTFL(data_layout);
+  if (layout == tflite::gpu::DataLayout::UNKNOWN) {
+    return kTfLiteError;
+  }
+  gpu_delegate->BindGlBufferToTensor(buffer_id, tensor_index, type, layout);
+  return kTfLiteOk;
+}
+
 void TfLiteGpuDelegateV2Delete(TfLiteDelegate* delegate) {
   delete tflite::gpu::GetDelegate(delegate);
 }
-
-//inline tflite::gpu::Delegate* GetGpuDelegate(TfLiteDelegate* delegate) {
-//    return reinterpret_cast<tflite::gpu::Delegate*>(delegate->data_);
-//}
-//
-//tflite::gpu::ObjectDef GetSSBOObjectDef(int channels) {
-//    tflite::gpu::ObjectDef gpu_object_def;
-//    gpu_object_def.data_type = tflite::gpu::DataType::FLOAT32;
-//    gpu_object_def.data_layout = tflite::gpu::DataLayout::BHWC;
-//    if (channels == 4) {
-//        gpu_object_def.data_layout = tflite::gpu::DataLayout::DHWC4;
-//    }
-//    gpu_object_def.object_type = tflite::gpu::ObjectType::OPENGL_SSBO;
-//    gpu_object_def.user_provided = true;
-//    return gpu_object_def;
-//}
-//
-//void TfLiteGpuDelegateBindBufferToTensor(TfLiteDelegate *delegate, GLuint ssbo, int tensor_index) {
-//    tflite::gpu::OpenGlBuffer tensor_object;
-//    tensor_object.id = ssbo;
-//
-//    GetGpuDelegate(delegate)->SetExternalObjectDef(tensor_index, GetSSBOObjectDef(3)); //TODO: maybe pass channels number as argument
-//    GetGpuDelegate(delegate)->SetExternalTensorObject(tensor_index, tensor_object);
-//}
